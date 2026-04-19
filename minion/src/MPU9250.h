@@ -114,6 +114,8 @@ class MPU9250_ {
 
     // Other settings
     bool has_connected {false};
+    bool has_mag {false};
+    bool require_mag_connection {true};
     bool b_ahrs {true};
     bool b_verbose {false};
 
@@ -125,7 +127,12 @@ public:
     static constexpr uint16_t CALIB_GYRO_SENSITIVITY {131};     // LSB/degrees/sec
     static constexpr uint16_t CALIB_ACCEL_SENSITIVITY {16384};  // LSB/g
 
-    bool setup(const uint8_t addr, const MPU9250Setting& mpu_setting = MPU9250Setting(), WireType& w = Wire) {
+    bool setup(
+        const uint8_t addr,
+        const MPU9250Setting& mpu_setting = MPU9250Setting(),
+        WireType& w = Wire,
+        const bool require_mag = true
+    ) {
         // addr should be valid for MPU
         if ((addr < MPU9250_DEFAULT_ADDRESS) || (addr > MPU9250_DEFAULT_ADDRESS + 7)) {
             Serial.print("I2C address 0x");
@@ -136,16 +143,25 @@ public:
         mpu_i2c_addr = addr;
         setting = mpu_setting;
         wire = &w;
+        has_mag = false;
+        require_mag_connection = require_mag;
 
         if (isConnectedMPU9250()) {
             initMPU9250();
-            if (isConnectedAK8963())
+            if (isConnectedAK8963()) {
                 initAK8963();
-            else {
+                has_mag = true;
+            } else if (require_mag_connection) {
                 if (b_verbose)
                     Serial.println("Could not connect to AK8963");
                 has_connected = false;
                 return false;
+            } else {
+                if (b_verbose)
+                    Serial.println("AK8963 not found, continuing in IMU-only mode");
+                m[0] = 0.0f;
+                m[1] = 0.0f;
+                m[2] = 0.0f;
             }
         } else {
             if (b_verbose)
@@ -180,12 +196,24 @@ public:
     }
 
     void calibrateMag() {
+        if (!has_mag) {
+            if (b_verbose) {
+                Serial.println("Skipping mag calibration: no AK8963 connected");
+            }
+            return;
+        }
         calibrate_mag_impl();
     }
 
     bool isConnected() {
-        has_connected = isConnectedMPU9250() && isConnectedAK8963();
+        const bool imu_ok = isConnectedMPU9250();
+        const bool mag_ok = (!require_mag_connection) || isConnectedAK8963();
+        has_connected = imu_ok && mag_ok;
         return has_connected;
+    }
+
+    bool hasMagnetometer() const {
+        return has_mag;
     }
 
     bool isConnectedMPU9250() {
@@ -515,6 +543,12 @@ private:
 
 public:
     void update_mag() {
+        if (!has_mag) {
+            m[0] = 0.0f;
+            m[1] = 0.0f;
+            m[2] = 0.0f;
+            return;
+        }
         int16_t mag_count[3] = {0, 0, 0};  // Stores the 16-bit signed magnetometer sensor output
 
         // Read the x/y/z adc values

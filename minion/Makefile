@@ -2,6 +2,8 @@ FQBN = esp32:esp32:esp32s3
 PORT ?= $(shell arduino-cli board list | awk '/^\/dev\/(cu|tty)\.(usb|wchusb|SLAB|ttyUSB|ttyACM)/ {print $$1; exit}')
 UPLOAD_SPEED ?= 115200
 
+.PHONY: clean neopixelTest mpuTest motionControl motorTest mpuWeTest
+
 # arduino-cli upload -p /dev/cu.usbmodem1101 --fqbn esp32:esp32:esp32s3 neopixelTest
 clean: blank/*
 	arduino-cli compile --fqbn $(FQBN) blank
@@ -27,3 +29,8 @@ motorTest: motorTest/*
 	arduino-cli compile --fqbn $(FQBN) motorTest --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
 	@if [ -z "$(PORT)" ]; then echo "No serial port detected. Run: arduino-cli board list"; echo "Then rerun with: make motorTest PORT=/dev/cu.usbmodemXXXX"; exit 1; fi
 	arduino-cli upload -p $(PORT) --fqbn $(FQBN) motorTest --upload-property upload.speed=$(UPLOAD_SPEED)
+
+mpuWeTest: mpuWeTest/*
+	arduino-cli compile --fqbn $(FQBN) mpuWeTest --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
+	@if [ -z "$(PORT)" ]; then echo "No serial port detected. Run: arduino-cli board list"; echo "Then rerun with: make mpuWeTest PORT=/dev/cu.usbmodemXXXX"; exit 1; fi
+	arduino-cli upload -p $(PORT) --fqbn $(FQBN) mpuWeTest --upload-property upload.speed=$(UPLOAD_SPEED)
