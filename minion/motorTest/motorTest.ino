@@ -20,6 +20,7 @@ constexpr unsigned long kStopDurationMs = 700;
 constexpr uint8_t kPwmLow = 80;
 constexpr uint8_t kPwmMedium = 140;
 constexpr uint8_t kPwmHigh = 220;
+constexpr unsigned long kLedBlinkMs = 180;
 
 class MotorHarness {
 public:
@@ -124,6 +125,32 @@ size_t stage_index = (sizeof(kStages) / sizeof(kStages[0])) - 1;
 bool stage_running = false;
 unsigned long stage_mark_ms = 0;
 
+void setStatusLed(uint8_t r, uint8_t g, uint8_t b) {
+  // neopixelWrite expects GRB order.
+  neopixelWrite(RGB_BUILTIN, g, r, b);
+}
+
+void updateStatusLed(bool running, unsigned long now_ms) {
+  static unsigned long last_toggle_ms = 0;
+  static bool blink_on = false;
+
+  if (running) {
+    if ((now_ms - last_toggle_ms) >= kLedBlinkMs) {
+      last_toggle_ms = now_ms;
+      blink_on = !blink_on;
+    }
+    if (blink_on) {
+      setStatusLed(0, 80, 0);
+    } else {
+      setStatusLed(0, 0, 0);
+    }
+    return;
+  }
+
+  // Stopped phase between stages.
+  setStatusLed(25, 0, 0);
+}
+
 void printStageHeader(const Stage& stage, size_t index) {
   Serial.printf(
     "[stage %u/%u] %s | L=%d R=%d\n",
@@ -145,6 +172,7 @@ void setup() {
   delay(1000);
 
   motors.begin();
+  setStatusLed(0, 0, 0);
 
   Serial.println("motorTest start");
   Serial.println("ENA/ENB jumpers must be removed for PWM speed control.");
@@ -158,6 +186,7 @@ void setup() {
 void loop() {
   const unsigned long now_ms = millis();
   const Stage& stage = kStages[stage_index];
+  updateStatusLed(stage_running, now_ms);
 
   if (stage_running) {
     if ((now_ms - stage_mark_ms) >= stage.run_ms) {
