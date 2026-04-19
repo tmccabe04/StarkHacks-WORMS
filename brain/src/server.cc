@@ -60,7 +60,10 @@ void handleChild(int client_fd, pid_t pid) {
         }
 
         bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-        if (bytes_read == 0) break; 
+        if (bytes_read == 0) {
+            printf("Minion %d disconnected.\n", pid);
+            break;
+        }
         sleep(1);
     }
 
@@ -97,6 +100,7 @@ void server() {
 
     while (true) {
         client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+        printf("New minion connection accepted.\n");
         pid_t pid = fork();
         if (pid == 0) {
             close(server_fd);
