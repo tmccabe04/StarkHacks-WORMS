@@ -69,6 +69,7 @@ void MotorDriverL298N::writeNormalized(float left_cmd, float right_cmd) {
   if (!initialized_) {
     return;
   }
+  Serial.printf("MotorCmd: L=%f R=%f\n", left_cmd, right_cmd);
   applyChannel(left_motor_, left_inverted_, left_cmd);
   applyChannel(right_motor_, right_inverted_, right_cmd);
 }
