@@ -3,18 +3,20 @@
 #include <stdint.h>
 
 struct MotorPinMap {
-  uint8_t left_in1 {4};
-  uint8_t left_in2 {5};
-  uint8_t left_pwm {6};
+  uint8_t left_in1 {10};
+  uint8_t left_in2 {11};
+  uint8_t left_pwm {9};
 
-  uint8_t right_in1 {7};
-  uint8_t right_in2 {15};
-  uint8_t right_pwm {16};
+  uint8_t right_in1 {12};
+  uint8_t right_in2 {13};
+  uint8_t right_pwm {14};
 
   uint8_t left_pwm_channel {0};
   uint8_t right_pwm_channel {1};
 
-  bool left_inverted {false};
+  // OUT2 is left positive and OUT1 is left negative in your wiring,
+  // so left command direction is inverted relative to IN1/IN2 "forward".
+  bool left_inverted {true};
   bool right_inverted {false};
 };
 
