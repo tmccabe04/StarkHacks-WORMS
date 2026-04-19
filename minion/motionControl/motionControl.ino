@@ -91,8 +91,11 @@ void loop() {
 
   if (client.available()) {
     String cmd = client.readStringUntil('\n');
-    Serial.println("Received from Brain: " + cmd);
-    // command_interface.handleLine(cmd.c_str()); // Process command
+    cmd.trim();
+    if (cmd.length() > 0) {
+      Serial.println("Executing from Brain: " + cmd);
+      command_interface.handleLine(cmd.c_str());
+    }
   }
 
   command_interface.poll();

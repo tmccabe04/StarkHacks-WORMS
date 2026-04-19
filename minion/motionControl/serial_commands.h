@@ -10,11 +10,10 @@ public:
 
   void poll();
   void printHelp() const;
+  void handleLine(const char* line);
 
 private:
   static constexpr size_t kLineBufferSize = 96;
-
-  void handleLine(const char* line);
 
   MotionController* controller_ {nullptr};
   char line_[kLineBufferSize] {};
