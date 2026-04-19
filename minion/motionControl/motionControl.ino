@@ -62,7 +62,14 @@ void setup() {
   delay(1000);
 
   Serial.println("minion motion controller boot");
-  
+
+  pinMode(14, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(9, OUTPUT);
+
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -95,6 +102,19 @@ void loop() {
     if (cmd.length() > 0) {
       Serial.println("Executing from Brain: " + cmd);
       command_interface.handleLine(cmd.c_str());
+      digitalWrite(14, HIGH);
+      digitalWrite(13, HIGH);
+      digitalWrite(12, LOW);
+      digitalWrite(11, HIGH);
+      digitalWrite(10, HIGH);
+      digitalWrite(9, LOW);
+      delay(1000);
+      digitalWrite(14, LOW);
+      digitalWrite(13, LOW);
+      digitalWrite(12, LOW);
+      digitalWrite(11, LOW);
+      digitalWrite(10, LOW);
+      digitalWrite(9, LOW);
     }
   }
 

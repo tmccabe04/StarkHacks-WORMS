@@ -320,7 +320,7 @@ MotionController::ActiveSetpoint MotionController::computeActiveSetpoint(
   }
 
   if (active_command_.type == MotionCommandType::MoveCm) {
-    const float heading_error = wrapAngleRad(command_target_heading_rad_ - imu_sample.yaw_unwrapped_rad);
+    const float heading_error = 0; // wrapAngleRad(command_target_heading_rad_ - imu_sample.yaw_unwrapped_rad);
     float omega_correction = move_heading_pid_.update(heading_error, dt_s);
     omega_correction = clampf(
       omega_correction,
@@ -335,7 +335,7 @@ MotionController::ActiveSetpoint MotionController::computeActiveSetpoint(
       setpoint.command_done = true;
     }
   } else if (active_command_.type == MotionCommandType::TurnDeg) {
-    const float actual_relative_yaw = imu_sample.yaw_unwrapped_rad - command_start_yaw_rad_;
+    const float actual_relative_yaw = command_start_yaw_rad_;// imu_sample.yaw_unwrapped_rad - command_start_yaw_rad_;
     const float heading_error = profile_sample.position - actual_relative_yaw;
 
     float omega_cmd = profile_sample.velocity + turn_heading_pid_.update(heading_error, dt_s);
@@ -349,8 +349,7 @@ MotionController::ActiveSetpoint MotionController::computeActiveSetpoint(
     setpoint.target_omega_rad_s = omega_cmd;
 
     if (profile_sample.done &&
-        fabsf(heading_error) < cfg_.safety.turn_settle_error_rad &&
-        fabsf(imu_sample.yaw_rate_rad_s) < cfg_.safety.turn_settle_rate_rad_s) {
+        fabsf(heading_error) < cfg_.safety.turn_settle_error_rad) {
       if (turn_settle_ticks_ < 255) {
         ++turn_settle_ticks_;
       }
@@ -402,8 +401,7 @@ void MotionController::computeWheelCommandTargets(
     right_cmd = signf(right_cmd == 0.0f ? target_right_speed : right_cmd) * cfg_.motor_model.min_start_duty;
   }
 
-  if (fabsf(target_left_speed) < 0.005f && fabsf(target_right_speed) < 0.005f &&
-      fabsf(imu_sample.yaw_rate_rad_s) < 0.04f) {
+  if (fabsf(target_left_speed) < 0.005f && fabsf(target_right_speed) < 0.005f) {
     left_cmd = 0.0f;
     right_cmd = 0.0f;
   }
