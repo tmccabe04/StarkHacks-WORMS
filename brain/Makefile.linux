@@ -1,0 +1,17 @@
+# Makefile for Brain (Native Linux Service)
+CXX = g++
+CXXFLAGS = -Wall -std=c++11
+SRC = src/server.cc src/center.cc src/main.cc
+OBJ = $(SRC:.cc=.o)
+TARGET = brain_service
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ) $(TARGET)

@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "../../..,../../..,../..,../../..,../../..,../../..",
+  "compiler.optimization_flags": "",
+  "customBuildProperties": "",
+  "fqbn": "arduino:zephyr:unoq:link_mode=dynamic,flash_mode=flash,wait_linux_boot=yes",
+  "hardwareFolders": "/Users/tommy/Library/Arduino15/packages/arduino/hardware/zephyr/0.54.1,/Users/tommy/Library/Arduino15/packages/arduino/hardware/zephyr/0.54.1",
+  "otherLibrariesFolders": "/Users/tommy/Documents/Arduino/libraries",
+  "sketchLocation": "/Users/tommy/Documents/projects/StarkHacks-WORMS/brain"
+}

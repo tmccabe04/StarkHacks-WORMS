@@ -1,0 +1,22 @@
+{
+  "port": "/dev/cu.usbmodem42326493012",
+  "configuration": "link_mode=dynamic,flash_mode=flash,wait_linux_boot=yes",
+  "output": "build",
+  "board": "arduino:zephyr:unoq",
+  "programmer": "",
+  "useProgrammer": false,
+  "optimize_for_debug": false,
+  "configurationRequired": true,
+  "compile_profile": "",
+  "monitorPortSettings": {
+    "settings": {
+      "port": "/dev/tty.usbmodem42326493012",
+      "baudRate": 115200,
+      "lineEnding": "\r\n",
+      "dataBits": 8,
+      "parity": "none",
+      "stopBits": "one"
+    },
+    "profile_name": ""
+  }
+}
