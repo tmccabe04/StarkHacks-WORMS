@@ -104,9 +104,10 @@ void MotionController::controlTick(uint32_t now_ms) {
   telemetry_.yaw_rate_rad_s = imu_sample.yaw_rate_rad_s;
   telemetry_.forward_accel_m_s2 = imu_sample.forward_accel_m_s2;
 
-  if (!imu_ok) {
-    enterFault(imu_sample.valid ? FaultCode::ImuStale : FaultCode::ImuUnavailable);
-  }
+  // ignore the IMU
+  // if (!imu_ok) {
+  //   enterFault(imu_sample.valid ? FaultCode::ImuStale : FaultCode::ImuUnavailable);
+  // }
 
   if (state_ == ControlState::Executing && cfg_.safety.command_timeout_ms > 0) {
     if ((now_ms - last_command_rx_ms_) > cfg_.safety.command_timeout_ms) {

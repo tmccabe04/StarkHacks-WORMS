@@ -5,7 +5,7 @@
 #include "serial_commands.h"
 
 // TODO: Replace with your actual credentials
-const char* ssid = "StarkHacks-5";
+const char* ssid = "StarkHacks-2";
 const char* password = "StarkHacks2026";
 const char* brain_ip = "10.10.10.227"; // Linux Brain IP
 const int brain_port = 10101;
@@ -97,6 +97,8 @@ void loop() {
       command_interface.handleLine(cmd.c_str());
     }
   }
+
+  if (controller.state() == ControlState::Fault) controller.clearFault();
 
   command_interface.poll();
 
