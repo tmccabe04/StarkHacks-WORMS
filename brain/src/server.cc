@@ -9,6 +9,8 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define PORT 10101
 
@@ -18,25 +20,31 @@ void sigchld_handler(int s) {
     errno = saved_errno;
 }
 
-void handleChild(int client_fd) {
-    char buffer[1024];
-    while (true) {
-        ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, 0);
-        if (bytes_read <= 0) {
-            if (bytes_read == 0) printf("Minion disconnected\n");
-            else perror("recv error");
-            break;
-        }
-        buffer[bytes_read] = '\0';
-        printf("Received data from minion: %s\n", buffer);
+void handleChild(int client_fd, pid_t pid) {
+    char pipe_path[64];
+    snprintf(pipe_path, sizeof(pipe_path), "/tmp/worm_pipe_%d", pid);
+    mkfifo(pipe_path, 0666);
 
-        const char* goal = "GOAL: MOVE_FORWARD";
-        if (send(client_fd, goal, strlen(goal), 0) < 0) {
-            perror("send error");
-            break;
+    int pipe_fd = open(pipe_path, O_RDONLY | O_NONBLOCK);
+    char buffer[1024];
+
+    while (true) {
+        // Check for instructions from pipe
+        ssize_t bytes_read = read(pipe_fd, buffer, sizeof(buffer) - 1);
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            printf("Dispatching to minion %d: %s\n", pid, buffer);
+            if (send(client_fd, buffer, bytes_read, 0) < 0) break;
         }
+
+        // Check for minion heartbeat/input
+        bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
+        if (bytes_read == 0) break; // Disconnected
         sleep(1);
     }
+
+    close(pipe_fd);
+    unlink(pipe_path);
     close(client_fd);
     exit(0);
 }
@@ -51,54 +59,25 @@ void server() {
     sa.sa_handler = sigchld_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        return;
-    }
+    sigaction(SIGCHLD, &sa, NULL);
 
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
-        return;
-    }
-
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        return;
-    }
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
     address.sin_port = htons(PORT);
 
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        return;
-    }
-
-    if (listen(server_fd, 20) < 0) {
-        perror("listen");
-        return;
-    }
-
-    char ip_str[INET_ADDRSTRLEN];
-    printf("Server listening on %s:%d\n", inet_ntop(AF_INET, &address.sin_addr, ip_str, INET_ADDRSTRLEN), PORT);
+    bind(server_fd, (struct sockaddr *)&address, sizeof(address));
+    listen(server_fd, 20);
 
     while (true) {
-        if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-            perror("accept");
-            continue;
-        }
-
-        printf("New minion connected\n");
-
+        client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
         pid_t pid = fork();
         if (pid == 0) {
             close(server_fd);
-            handleChild(client_fd);
-        } else if (pid > 0) {
-            close(client_fd);
+            handleChild(client_fd, getpid());
         } else {
-            perror("fork failed");
             close(client_fd);
         }
     }
