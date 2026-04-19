@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <string.h>
 
-#define PORT 8080
+#define PORT 10101
 
 void handleChild(int client_fd) {
     char buffer[1024];
@@ -65,7 +65,8 @@ void server() {
         return;
     }
 
-    printf("Server listening on port %d\n", PORT);
+    char ip_str[INET_ADDRSTRLEN];
+    printf("Server listening on %s:%d\n", inet_ntop(AF_INET, &address.sin_addr, ip_str, INET_ADDRSTRLEN), PORT);
 
     while (true) {
         if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
