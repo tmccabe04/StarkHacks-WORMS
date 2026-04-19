@@ -42,9 +42,13 @@ void sigchld_handler(int s) {
 }
 
 void handleChild(int client_fd, pid_t pid) {
-    register_minion(pid);
+    char pipe_path[64];
+    snprintf(pipe_path, sizeof(pipe_path), "/tmp/worm_pipe_%d", pid);
+    
+    // Ensure the FIFO exists
+    mkfifo(pipe_path, 0666);
 
-    int pipe_fd = open(minions.back().pipe_path, O_RDONLY | O_NONBLOCK);
+    int pipe_fd = open(pipe_path, O_RDONLY | O_NONBLOCK);
     char buffer[1024];
 
     while (true) {
@@ -56,13 +60,12 @@ void handleChild(int client_fd, pid_t pid) {
         }
 
         bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-        if (bytes_read == 0) break;
+        if (bytes_read == 0) break; 
         sleep(1);
     }
 
     close(pipe_fd);
-    unlink(minions.back().pipe_path);
-    unregister_minion(pid);
+    unlink(pipe_path);
     close(client_fd);
     exit(0);
 }
@@ -99,6 +102,7 @@ void server() {
             close(server_fd);
             handleChild(client_fd, getpid());
         } else {
+            register_minion(pid);
             close(client_fd);
         }
     }
