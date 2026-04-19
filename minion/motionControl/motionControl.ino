@@ -7,7 +7,7 @@
 // TODO: Replace with your actual credentials
 const char* ssid = "StarkHacks-5";
 const char* password = "StarkHacks2026";
-const char* brain_ip = "0.0.0.0"; // Linux Brain IP
+const char* brain_ip = "10.10.10.227"; // Linux Brain IP
 const int brain_port = 10101;
 
 WiFiClient client;
