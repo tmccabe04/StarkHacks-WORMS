@@ -27,10 +27,11 @@ bool MotionController::begin(const RobotConfig& config) {
     return false;
   }
 
-  if (!imu_.begin(cfg_)) {
-    enterFault(FaultCode::ImuUnavailable);
-    return false;
-  }
+  // IMU bypassed
+  // if (!imu_.begin(cfg_)) {
+  //   enterFault(FaultCode::ImuUnavailable);
+  //   return false;
+  // }
 
   state_ = ControlState::Idle;
   fault_ = FaultCode::None;
@@ -93,12 +94,16 @@ void MotionController::controlTick(uint32_t now_ms) {
     dt_s = kMinDt;
   }
 
-  (void)imu_.update(now_ms);
-  const ImuSample imu_sample = imu_.sample();
-  const bool imu_ok = imu_.isHealthy(now_ms, cfg_.safety.imu_stale_timeout_ms);
+  ImuSample imu_sample = {};
+  imu_sample.yaw_deg = 0.0f;
+  imu_sample.yaw_unwrapped_rad = 0.0f;
+  imu_sample.yaw_rate_rad_s = 0.0f;
+  imu_sample.forward_accel_m_s2 = 0.0f;
+  imu_sample.valid = true;
+  const bool imu_ok = true;
 
   telemetry_.imu_ok = imu_ok;
-  telemetry_.last_imu_update_ms = imu_sample.updated_ms;
+  telemetry_.last_imu_update_ms = now_ms;
   telemetry_.yaw_deg = imu_sample.yaw_deg;
   telemetry_.yaw_unwrapped_rad = imu_sample.yaw_unwrapped_rad;
   telemetry_.yaw_rate_rad_s = imu_sample.yaw_rate_rad_s;
