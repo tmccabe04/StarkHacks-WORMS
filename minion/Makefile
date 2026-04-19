@@ -17,3 +17,7 @@ mpuTest: mpuTest/*
 motionControl: motionControl/*
 	arduino-cli compile --fqbn $(FQBN) motionControl --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
 	arduino-cli upload -p $(PORT) --fqbn $(FQBN) motionControl
+
+motorTest: motorTest/*
+	arduino-cli compile --fqbn $(FQBN) motorTest --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
+	arduino-cli upload -p $(PORT) --fqbn $(FQBN) motorTest
