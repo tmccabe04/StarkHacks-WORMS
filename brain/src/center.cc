@@ -1,4 +1,5 @@
 #include "brain.h"
+#include <cstring>
 #include <fcntl.h>
 
 void dispatch_mission(float target_x, float target_y) {
