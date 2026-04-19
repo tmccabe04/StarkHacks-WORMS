@@ -13,3 +13,7 @@ neopixelTest: neopixelTest/*
 mpuTest: mpuTest/*
 	arduino-cli compile --fqbn $(FQBN) mpuTest --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
 	arduino-cli upload -p $(PORT) --fqbn $(FQBN) mpuTest
+
+motionControl: motionControl/*
+	arduino-cli compile --fqbn $(FQBN) motionControl --build-property "build.extra_flags=-DARDUINO_USB_CDC_ON_BOOT=1"
+	arduino-cli upload -p $(PORT) --fqbn $(FQBN) motionControl
