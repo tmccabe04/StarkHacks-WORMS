@@ -1,6 +1,16 @@
 #include "brain.h"
-#include <cstring>
 #include <fcntl.h>
+#include <vector>
+#include <string>
+#include <sstream>
+
+void send_to_minion(Minion* m, const std::string& cmd) {
+    int pipe_fd = open(m->pipe_path, O_WRONLY);
+    if (pipe_fd != -1) {
+        write(pipe_fd, cmd.c_str(), cmd.length());
+        close(pipe_fd);
+    }
+}
 
 void dispatch_mission(float target_x, float target_y) {
     std::lock_guard<std::mutex> lock(minions_mutex);
@@ -21,19 +31,23 @@ void dispatch_mission(float target_x, float target_y) {
     }
 
     if (closest) {
-        int pipe_fd = open(closest->pipe_path, O_WRONLY);
-        if (pipe_fd != -1) {
-            char cmd[64];
-            snprintf(cmd, sizeof(cmd), "MOVE_TO %.2f %.2f", target_x, target_y);
-            write(pipe_fd, cmd, strlen(cmd));
-            close(pipe_fd);
-            
-            // Update minion state
-            closest->x = target_x;
-            closest->y = target_y;
-            
-            std::cout << "Dispatched mission to minion " << closest->pid 
-                      << " at distance " << min_dist << std::endl;
-        }
+        float dx = target_x - closest->x;
+        float dy = target_y - closest->y;
+        
+        float dist = std::sqrt(dx*dx + dy*dy);
+        float angle = std::atan2(dy, dx) * 180.0f / M_PI;
+
+        std::stringstream ss_turn, ss_move;
+        ss_turn << "TURN " << angle << "\n";
+        ss_move << "MOVE " << dist << "\n";
+
+        send_to_minion(closest, ss_turn.str());
+        send_to_minion(closest, ss_move.str());
+        
+        closest->x = target_x;
+        closest->y = target_y;
+        
+        std::cout << "Dispatched TURN " << angle << " and MOVE " << dist 
+                  << " to minion " << closest->pid << std::endl;
     }
 }
