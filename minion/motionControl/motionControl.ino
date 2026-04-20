@@ -1,0 +1,146 @@
+#include <Arduino.h>
+#include <WiFi.h>
+
+#include "motion_controller.h"
+#include "serial_commands.h"
+
+// TODO: Replace with your actual credentials
+const char* ssid = "StarkHacks-2";
+const char* password = "StarkHacks2026";
+const char* brain_ip = "10.10.10.227"; // Linux Brain IP
+const int brain_port = 10101;
+
+WiFiClient client;
+
+namespace {
+
+RobotConfig kConfig = defaultRobotConfig();
+MotionController controller;
+SerialCommands command_interface(&controller);
+
+uint32_t last_control_tick_ms = 0;
+uint32_t last_print_ms = 0;
+
+const char* stateName(ControlState state) {
+  switch (state) {
+    case ControlState::Idle:
+      return "IDLE";
+    case ControlState::Executing:
+      return "EXECUTING";
+    case ControlState::Stopping:
+      return "STOPPING";
+    case ControlState::Fault:
+      return "FAULT";
+  }
+  return "UNKNOWN";
+}
+
+const char* faultName(FaultCode fault) {
+  switch (fault) {
+    case FaultCode::None:
+      return "NONE";
+    case FaultCode::MotorInitFailed:
+      return "MOTOR_INIT_FAILED";
+    case FaultCode::ImuUnavailable:
+      return "IMU_UNAVAILABLE";
+    case FaultCode::ImuStale:
+      return "IMU_STALE";
+    case FaultCode::CommandTimeout:
+      return "COMMAND_TIMEOUT";
+    case FaultCode::ControlLoopOverrun:
+      return "CONTROL_OVERRUN";
+    case FaultCode::QueueFull:
+      return "QUEUE_FULL";
+  }
+  return "UNKNOWN";
+}
+
+}  // namespace
+
+void setup() {
+  Serial.begin(115200);
+  delay(1000);
+
+  Serial.println("minion motion controller boot");
+
+  pinMode(14, OUTPUT);
+  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(9, OUTPUT);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected");
+
+  if (!controller.begin(kConfig)) {
+    Serial.println("controller init failed");
+  }
+
+  command_interface.printHelp();
+
+  last_control_tick_ms = millis();
+  last_print_ms = millis();
+}
+
+void loop() {
+  if (!client.connected()) {
+    if (client.connect(brain_ip, brain_port)) {
+      Serial.println("Connected to brain");
+    } else {
+      delay(5000);
+    }
+  }
+
+  if (client.available()) {
+    String cmd = client.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() > 0) {
+      Serial.println("Executing from Brain: " + cmd);
+      command_interface.handleLine(cmd.c_str());
+      digitalWrite(14, HIGH);
+      digitalWrite(13, HIGH);
+      digitalWrite(12, LOW);
+      digitalWrite(11, HIGH);
+      digitalWrite(10, HIGH);
+      digitalWrite(9, LOW);
+      delay(1000);
+      digitalWrite(14, LOW);
+      digitalWrite(13, LOW);
+      digitalWrite(12, LOW);
+      digitalWrite(11, LOW);
+      digitalWrite(10, LOW);
+      digitalWrite(9, LOW);
+    }
+  }
+
+  if (controller.state() == ControlState::Fault) controller.clearFault();
+
+  command_interface.poll();
+
+  const uint32_t now_ms = millis();
+
+  if (now_ms - last_control_tick_ms >= kConfig.control_period_ms) {
+    last_control_tick_ms = now_ms;
+    controller.controlTick(now_ms);
+  }
+
+  if (now_ms - last_print_ms >= 250) {
+    last_print_ms = now_ms;
+    const Telemetry telemetry = controller.getTelemetry();
+    Serial.printf(
+      "state=%s fault=%s yaw=%.1fdeg dist=%.3fm l=%.2f r=%.2f prog=%.2f\n",
+      stateName(telemetry.state),
+      faultName(telemetry.fault),
+      telemetry.yaw_deg,
+      telemetry.estimated_distance_m,
+      telemetry.left_motor_cmd,
+      telemetry.right_motor_cmd,
+      telemetry.command_progress
+    );
+  }
+}
